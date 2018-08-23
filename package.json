@@ -1,0 +1,19 @@
+{
+  "name": "websockets",
+  "version": "1.0.0",
+  "description": "websockets test",
+  "main": "index.js",
+  "dependencies": {
+    "websocket": "^1.0.26"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "websockets;",
+    "node"
+  ],
+  "author": "augusto.flach",
+  "license": "ISC"
+}
