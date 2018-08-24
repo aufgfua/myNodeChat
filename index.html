@@ -2,163 +2,137 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>WebSockets - Simple chat</title>
+    <title>WebSockets - Simple notepad</title>
     <style>
-    * { font-family:tahoma; font-size:12px; padding:0px;margin:0px;}
-    p { line-height:18px; }
-    div { width:500px; margin-left:auto; margin-right:auto;}
-    #content { padding:5px; background:#ddd; border-radius:5px;
-        overflow-y: scroll; border:1px solid #CCC;
-        margin-top:10px; height: 160px; }
-    #input { border-radius:2px; border:1px solid #ccc;
-        margin-top:10px; padding:5px; width:400px;
-    }
-    #status { width:88px;display:block;float:left;margin-top:15px; }
+    html, body { padding:0px; margin:0px; border: 0px; width: 100%; height: 100%;}
+    #text { width:100%; height:100%; resize: none; }
+    #error {position: fixed; text-align: center; vertical-align: middle; height:20px; width:100%; z-index: 2; background-color: red;}
+    #modal {margin: auto;}
+    form {margin: auto;}
+    #password { margin-top: 5%; }
+    input { width: 50%; margin: 2.5% 25%;}
+
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.css" />
   </head>
   <body>
-    <div id="content"></div>
-    <div>
-      <span id="status">Connecting...</span>
-      <input type="password" id="input" disabled="disabled" />
-    </div>
-    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js">
+    <div id="error"></div>
+    <textarea id="text"></textarea>
+    <div id='modal'><form action="#"><center id="passwordText">Enter Password</center><input type="password" id="password"><br><input type="submit" onclick="login();" value="login"></form></div>
     </script>
     <script>
 
+    var connection;
+
     $(function () {
-      "use strict";
 
-      // for better performance - to avoid searching in DOM
-      var content = $('#content');
-      var input = $('#input');
-      var status = $('#status');
+      var textArea = $('#text');
+      var error = $('#error');
+      error.hide();
+      textArea.val('');
+      textArea.attr('disabled', 'disabled');
+      var server = 'localhost:9090'
 
-      // my color assigned by the server
-      var myColor = false;
-      // my name sent to the server
-      var myName = false;
+      var text = {text: '',
+                  date: new Date('01/01/1995')};
 
-      // if user is running mozilla then use it's built-in WebSocket
       window.WebSocket = window.WebSocket || window.MozWebSocket;
 
-      // if browser doesn't support WebSocket, just show
-      // some notification and exit
       if (!window.WebSocket) {
-        content.html($('<p>',
-          { text:'Sorry, but your browser doesn\'t support WebSocket.'}
-        ));
-        input.hide();
-        $('span').hide();
+        error.show();
+        error.html('WebSockets not supported');
+        textArea.attr('disabled', 'disabled');
         return;
       }
 
       // open connection
-      var connection = new WebSocket('ws://127.0.0.1:1337');
+      connection = new WebSocket('ws://' + server);
 
       connection.onopen = function () {
-        // first we want users to enter their names
-        input.removeAttr('disabled');
-        status.text('Enter Password');
+
+
+        $("#modal").modal({
+         escapeClose: false,
+         clickClose: false,
+         showClose: false
+       });
+
+
+
       };
 
       connection.onerror = function (error) {
-        // just in there were some problems with connection...
-        content.html($('<p>', {
-          text: 'Sorry, but there\'s some problem with your '
-             + 'connection or the server is down.'
-        }));
+        error.show();
+        error.html('An error occoured');
       };
 
       // most important part - incoming messages
       connection.onmessage = function (message) {
-        // try to parse JSON message. Because we know that the server
-        // always returns JSON this should work without any problem but
-        // we should make sure that the massage is not chunked or
-        // otherwise damaged.
+        error.hide();
         try {
           var json = JSON.parse(message.data);
         } catch (e) {
           console.log('Invalid JSON: ', message.data);
           return;
         }
-
-        // NOTE: if you're not sure about the JSON structure
-        // check the server source code above
-        // first response from the server with user's color
-        if (json.type === 'password') {
+        //console.log(json);
+        if (json.type === 'login') {
           if(json.data === true){
 
-            myColor = json.blue;
-            status.text('Augusto' + ': ').css('color', myColor);
-            input.attr('type', 'text');
-            input.removeAttr('disabled').focus();
+            textArea.removeAttr('disabled');
+            error.hide();
+
+          }else{
+            $("#passwordText").html('Wrong Password! Try Again');
+            $("#modal").modal({
+             escapeClose: false,
+             clickClose: false,
+             showClose: false
+           });
+
+
           }
-          // from now user can start sending messages
-        } else if (json.type === 'history') { // entire message history
-          // insert every single message to the chat window
-          for (var i=0; i < json.data.length; i++) {
-          addMessage(json.data[i].author, json.data[i].text,
-              json.data[i].color, new Date(json.data[i].time));
+        } else if (json.type === 'text') {
+          json.data.date = new Date(json.data.date);
+          if(json.data.date > text.date){
+            textArea.val(json.data.text);
+            text = json.data;
+            
           }
-        } else if (json.type === 'message') { // it's a single message
-          // let the user write another message
-          input.removeAttr('disabled');
-          addMessage(json.data.author, json.data.text,
-                     json.data.color, new Date(json.data.time));
-        } else {
-          console.log('Hmm..., I\'ve never seen JSON like this:', json);
         }
       };
-
-      /**
-       * Send message when user presses Enter key
-       */
-      input.keydown(function(e) {
-        if (e.keyCode === 13) {
-          var msg = $(this).val();
-          if (!msg) {
-            return;
-          }
-          // send the message as an ordinary text
-          connection.send(msg);
-          $(this).val('');
-          // disable the input field to make the user wait until server
-          // sends back response
-          input.attr('disabled', 'disabled');
-
-          // we know that the first message sent from a user their name
-          if (myName === false) {
-            myName = msg;
-          }
-        }
+      textArea.change(function(e){
+        text.date = new Date();
+        text.text = textArea.val();
+        connection.send(JSON.stringify({type: 'text', data: text}));
       });
 
-      /**
-       * This method is optional. If the server wasn't able to
-       * respond to the in 3 seconds then show some error message
-       * to notify the user that something is wrong.
-       */
+
       setInterval(function() {
         if (connection.readyState !== 1) {
-          status.text('Error');
-          input.attr('disabled', 'disabled').val(
-              'Unable to communicate with the WebSocket server.');
+          error.show();
+          error.html('Server not responding');
         }
       }, 3000);
 
-      /**
-       * Add message to the chat window
-       */
-      function addMessage(author, message, color, dt) {
-        content.prepend('<p><span style="color:' + color + '">'
-            + author + '</span> @ ' + (dt.getHours() < 10 ? '0'
-            + dt.getHours() : dt.getHours()) + ':'
-            + (dt.getMinutes() < 10
-              ? '0' + dt.getMinutes() : dt.getMinutes())
-            + ': ' + message + '</p>');
-      }
+
+
+
+
+
+
+
     });
+
+    function login(){
+      var passwd = $("#password").val();
+      connection.send(JSON.stringify({type: 'password', data: passwd}));
+      $.modal.close();
+    }
+
+
 
     </script>
   </body>
