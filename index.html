@@ -9,8 +9,8 @@
     #error {position: fixed; text-align: center; vertical-align: middle; height:20px; width:100%; z-index: 2; background-color: red;}
     #modal {margin: auto;}
     form {margin: auto;}
-    #password { margin-top: 5%; }
-    input { width: 50%; margin: 2.5% 25%;}
+    #password { width: 50%; margin: 5% 25%;}
+    input { width: 56%; margin: 0% 24%}
 
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0/jquery.min.js"></script>
@@ -20,12 +20,13 @@
   <body>
     <div id="error"></div>
     <textarea id="text"></textarea>
-    <div id='modal'><form action="#"><center id="passwordText">Enter Password</center><input type="password" id="password"><br><input type="submit" onclick="login();" value="login"></form></div>
+    <div id='modal'><form action=""><center id="passwordText">Enter Password</center><input type="password" id="password"><br><input type="submit" onclick="login(); return false;" value="login"></form></div>
     </script>
     <script>
 
     var connection;
 
+    var path = location.pathname;
     $(function () {
 
       var textArea = $('#text');
@@ -33,7 +34,7 @@
       error.hide();
       textArea.val('');
       textArea.attr('disabled', 'disabled');
-      var server = 'localhost:9090'
+      var server = 'flachhaus.ddns.net:1793'
 
       var text = {text: '',
                   date: new Date('01/01/1995')};
@@ -55,7 +56,6 @@
 
         $("#modal").modal({
          escapeClose: false,
-         clickClose: false,
          showClose: false
        });
 
@@ -99,14 +99,14 @@
           if(json.data.date > text.date){
             textArea.val(json.data.text);
             text = json.data;
-            
+
           }
         }
       };
       textArea.change(function(e){
         text.date = new Date();
         text.text = textArea.val();
-        connection.send(JSON.stringify({type: 'text', data: text}));
+        connection.send(JSON.stringify({type: 'text', data: text, 'path': path}));
       });
 
 
@@ -128,7 +128,7 @@
 
     function login(){
       var passwd = $("#password").val();
-      connection.send(JSON.stringify({type: 'password', data: passwd}));
+      connection.send(JSON.stringify({type: 'password', data: passwd, 'path': path}));
       $.modal.close();
     }
 

@@ -2,19 +2,23 @@
 process.title = 'node-chat';
 
 
-var serverPort = 9090;
+var serverPort = 1793;
 
 var webSocketServer = require('websocket').server;
 var http = require('http');
 var fs = require('fs');
 
+var paths = JSON.stringify(fs.readFileSync('paths.json'));
+paths = paths ? {} : paths;
 var history = {};
 var text = {'date': new Date(),
             'text': ''}
 var lastDate = new Date().getDate() + '/' + new Date().getMonth() + '/' + new Date().getFullYear();
 history[lastDate] = {'text': text,
                      'changes': 0};
-var password = '4m08ici';
+var password = '1234';
+
+
 
 
 
@@ -29,10 +33,11 @@ function htmlEntities(str) {
  * HTTP server
  */
 var server = http.createServer(function(request, response) {
+
   var index = fs.readFileSync('./index.html');
   response.end(index);
 });
-server.listen(serverPort, function() {
+server.listen(serverPort, '0.0.0.0', function() {
   console.log(new Date() + " - Server is listening on port "
       + serverPort);
 });
@@ -42,12 +47,15 @@ var wsServer = new webSocketServer({
 });
 
 wsServer.on('request', function(request) {
+
   console.log(new Date() + ' - Connection from origin '
       + request.origin);
 
   var connection = request.accept(null, request.origin);
   var tryPass = false;
   var send;
+  var path;
+  var pathObj;
 
 
   // send back chat history
@@ -61,6 +69,8 @@ wsServer.on('request', function(request) {
        var msg;
        var txt;
 
+
+
        if(isJson(message.utf8Data)){
          msg = JSON.parse(message.utf8Data);
          tryPass = htmlEntities(msg.data);
@@ -69,8 +79,20 @@ wsServer.on('request', function(request) {
          return;
        }
 
+       path = msg.path;
+       path = path.split('/');
+       console.log(path);
+       var temp = paths;
+       for(var ind in path){
+         var key = path[ind];
+         if(key === 'history' || key === '') continue;
+         temp[key] = typeof temp[key] === 'object' ? temp[key] : {history: {}};
+         console.log('temp['+key+'] - ' + temp[key]);
+       }
+       pathObj = temp;
 
-        if(tryPass !== password) {
+       var passwd = typeof pathObj['password'] === 'string' ? pathObj['password'] : password ;
+        if(tryPass !== passwd) {
           tryPass = false;
           connection.sendUTF(JSON.stringify({ type: 'login', data: false}));
         } else {
@@ -124,6 +146,8 @@ wsServer.on('request', function(request) {
 
 
 
+
+
 function isJson(txt){
   try {
     JSON.parse(txt);
@@ -132,6 +156,11 @@ function isJson(txt){
   }
   return true;
 }
+
+var rewrite = setInterval(function(){
+  console.log('writing...');
+  fs.writeFile('paths.json', JSON.stringify(paths), function(){ console.log('OK') });
+}, 1000);
 
 
 var update = setInterval(function(){
