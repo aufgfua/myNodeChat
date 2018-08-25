@@ -5,21 +5,34 @@
     <title>WebSockets - Simple notepad</title>
     <style>
     html, body { padding:0px; margin:0px; border: 0px; width: 100%; height: 100%;}
-    #text { width:100%; height:100%; resize: none; }
     #error {position: fixed; text-align: center; vertical-align: middle; height:20px; width:100%; z-index: 2; background-color: red;}
     #modal {margin: auto;}
     form {margin: auto;}
     #password { width: 50%; margin: 5% 25%;}
     input { width: 56%; margin: 0% 24%}
 
+
+
+    #text { width:100%; height:100%; resize: none;  display: inline-block; float: right; margin: 0px; box-sizing: border-box; padding: 10px; border: 0px;}
+
+    #side {background-color: #DDD; display: inline-block; float: left; width:0%; height:100%;  box-sizing: border-box;}
+
   </style>
+
+  <!-- <script src="res/lib/codemirror.js"></script>
+  <link rel="stylesheet" href="res/lib/codemirror.css">
+  <script src="res/mode/javascript/javascript.js"></script> -->
+
+
+
+
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.css" />
   </head>
   <body>
-    <div id="error"></div>
-    <textarea id="text"></textarea>
+    <div id="side"></div><div id="error"></div><textarea id="text"></textarea>
     <div id='modal'><form action=""><center id="passwordText">Enter Password</center><input type="password" id="password"><br><input type="submit" onclick="login(); return false;" value="login"></form></div>
     </script>
     <script>
@@ -29,12 +42,17 @@
     var path = location.pathname;
     $(function () {
 
+
+      //$("#side")
+
       var textArea = $('#text');
       var error = $('#error');
+      $("#modal").hide();
       error.hide();
       textArea.val('');
       textArea.attr('disabled', 'disabled');
       var server = 'flachhaus.ddns.net:1793'
+      var flag = true;
 
       var text = {text: '',
                   date: new Date('01/01/1995')};
@@ -54,11 +72,7 @@
       connection.onopen = function () {
 
 
-        $("#modal").modal({
-         escapeClose: false,
-         showClose: false
-       });
-
+        connection.send(JSON.stringify({type: 'password', data: '', 'path': path}));
 
 
       };
@@ -83,14 +97,29 @@
 
             textArea.removeAttr('disabled');
             error.hide();
+            showSide();
+            // var textDiv = document.getElementById('text');
+            // var codeMirror = CodeMirror.fromTextArea(textDiv, {'lineNumbers': true});
+
+
+
+
+
 
           }else{
-            $("#passwordText").html('Wrong Password! Try Again');
+            if(flag){
+              $("#passwordText").html('Need Password for Using');
+              flag = false;
+            }else{
+              $("#passwordText").html('Wrong Password! Try Again');
+            }
             $("#modal").modal({
              escapeClose: false,
              clickClose: false,
              showClose: false
            });
+           $("#modal").show();
+           $("#password").focus();
 
 
           }
@@ -132,6 +161,16 @@
       $.modal.close();
     }
 
+    function showSide(){
+
+      if(false){
+        $("#text").css('width', '90%');
+        $("#side").css('width', '10%');
+
+      }
+
+
+    }
 
 
     </script>
